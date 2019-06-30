@@ -1,0 +1,43 @@
+prime   | status    | notes
+--------+-----------+-------
+2       | found     |
+3       | found     |
+5       | found     |
+7       | found     |
+11      | found     |
+13      | found     |
+17      | found     |
+19      | found     |
+23      | found     |
+29      | found     |
+31      | found     |
+37      | found     |
+41      | found     |
+43      | error     | stack error
+53      | found     |
+61      | found     |
+67      | error     | "Not implemented yet"
+71      | error     | unimplemented expression
+73      | found     |
+79      | error     | stack error
+89      | error     | unimplemented expression
+97      | found     |
+101     | found     | Half a million characters long!
+109     | found     |
+113     | error     | unimplemented expression
+127     | error     | stack error
+137     | error     | "Unable to resolve expression"
+151     | error     | unimplemented expression
+157     | error     | stack error
+163     | error     | "Same radical appears more than once in expression"
+193     | found     |
+199     | error     | unimplemented expression
+211     | error     | unimplemented expression
+241     | found     | expression longer than terminal window
+251     | error     | unimplemented expression
+257     | found     |
+271     | error     | "Same radical appears more than once in expression"
+281     | error     | unimplemented expression
+331     | error     | unimplemented expression
+337     | error     | unimplemented expression
+353     | error     | unimplemented expression
