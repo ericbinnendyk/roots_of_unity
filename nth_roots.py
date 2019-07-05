@@ -1,5 +1,5 @@
-from radical_expr import *
-from my_math import float_equal, factorize
+from radical_expr import etimes, esumlist, rtimes, expr_to_float, expr_to_latex
+from my_math import float_equal, factorize, r
 from functools import reduce
 
 # Calculates a radical expression for the pth roots of unity, where p is prime
@@ -260,19 +260,43 @@ r_x = {
     5 : [1, (['+', -1, ['r', 2, 0, 5, 1], ['r', 2, 0, ['+', -10, ['r', 2, 1, 5, 2]], 1]], 4), (['+', -1, ['r', 2, 1, 5, 1], ['r', 2, 0, ['+', -10, ['r', 2, 0, 5, 2]], 1]], 4), (['+', -1, ['r', 2, 1, 5, 1], ['r', 2, 1, ['+', -10, ['r', 2, 0, 5, 2]], 1]], 4), (['+', -1, ['r', 2, 0, 5, 1], ['r', 2, 1, ['+', -10, ['r', 2, 1, 5, 2]], 1]], 4)]
 }
 
+# constructs radical expressions for nth roots of unity, where n (passed in as rnum) is prime
 def roots_to_radicals(rnum):
     if rnum in r_x:
         return r_x[rnum]
 
+    # prime factors of n - 1
+    # to match the expressions I found in 2013, factors are placed in increasing order except for one 2 at the end.
+    # the last factor needs to be 2 for the real and imaginary parts of the final answer to be separable
+    # other than that, any permutation of factors leads to an equally valid, distinct expression
     facts = factorize(rnum // 2) + [2]
+    # multiplicative cycle of some primitive root, mod n
     power_cycle = make_power_cycle(rnum)
+    # n_terms: number of a-sums on each iteration (see below)
     n_terms = 1
+    # all_a: list of all lists of a-sums (see below for what an a-sum is) from each loop iteration
+    # all_a_x: expressions for all a-sums
     all_a = []
     all_a_x = []
 
     for i, c_size in enumerate(facts):
+        # calculates:
+        # - p_1 sums of (n - 1)/p_1 roots
+        # - p_1*p_2 sums of (n - 1)/(p_1*p_2) roots
+        # - p_1*p_2*p_3 sums of (n - 1)/(p_1*p_2*p_3) roots
+        # etc, where a, b, c... are prime factors of n - 1
+        # let p_k = c_size be the prime factor of n - 1 considered on the kth iteration
         n_terms *= c_size
 
+        # a: list of sums of (n - 1)/(p_1*...*p_k) roots (hereafter called a-sums) stored as lists
+        #   these sums can be grouped into (n - 1)/(p_1*...*p_{k - 1}) sets of p_k
+        # a_x: expressions for a-sums in a
+        # s: for each set of p_k a-sums a_0 to a_{p_k - 1}, a list of p_k sums (stored as lists or matrices where appropriate), where the i-th sum s_i is equal to a_j*r(p_k, i*j), for j from 0 to p_k - 1
+        #   s is simply a list of all p_k sums for all (n - 1)/(p_1*...*p_{k - 1}) sets of a-sums
+        # s_x: expressions for s-sums in s
+        # ss: contains each s-sum, except for the first value in a p_k-size set, raised to the power p_k, expressed as lists
+        # ss_coeff: coefficients in expression, in terms of 1 and a-sum values from p_{k - 1} level, for each value in ss
+        # ss_x: expressions for values in ss
         a = []
         a_x = []
         s = []
@@ -285,7 +309,9 @@ def roots_to_radicals(rnum):
 
         cyc = make_cycle(c_size)
 
+        # iterate over each set of p_k terms
         for h in multi_range(tuple(facts[:i])):
+            # construct a-sums
             part_ind = 0
             mult = 1
             for j in range(i):
@@ -294,6 +320,7 @@ def roots_to_radicals(rnum):
             for j in range(c_size):
                 a.append(a_values[j * (n_terms // c_size) + part_ind])
 
+            # construct s-sums and ss values
             offset = 0
             mult = c_size
             for j in range(i - 1, -1, -1):
@@ -309,10 +336,13 @@ def roots_to_radicals(rnum):
                     s.append(msumlist([xtimes(cyc[j * k % c_size], a[offset + k], rnum) for k in range(c_size)], rnum))
                     ss.append(mpower(s[offset + j], c_size, rnum))
 
+            # construct terms with which to describe each ss expression as well as the 0th s-sum in each set.
+            # these terms are 1 and the a-sums from the previous iteration, whose radical expressions are already found
             if i > 0:
                 terms = [1] + all_a[i - 1]
             else:
                 terms = [1]
+            # build s0_coeff and ss_coeff
             s0_coeff = deconvert(s[offset], terms, rnum)
             ss_coeff.append(None)
             if c_size == 2:
@@ -321,10 +351,13 @@ def roots_to_radicals(rnum):
                 for j in range(1, c_size):
                     ss_coeff.append(mdeconvert(ss[offset + j], terms, rnum))
 
+            # retrieve the radical expression for each term used to construct s0_coeff and ss_coeff
             if i > 0:
                 terms_x = [1] + all_a_x[i - 1]
             else:
                 terms_x = [1]
+            # build s0_x and ss_x
+            # s0_x is the 0th s_x expression in each set but not the 0th member of s_x because s_x concatenates expression lists from every set on the p_k level
             s0_x = coeff_to_expr(s0_coeff, terms_x)
             ss_x.append(None)
             if c_size == 2:
@@ -335,6 +368,7 @@ def roots_to_radicals(rnum):
 
             s_x.append(s0_x)
 
+            # build the other s_x expressions (the p_k-th roots of the ss_x expressions)
             for j in range(1, c_size):
                 si_xs = [['r', c_size, k, ss_x[offset + j], 1] for k in range(c_size)]
                 set = False
@@ -350,6 +384,7 @@ def roots_to_radicals(rnum):
                 if not set:
                     raise RuntimeError("Unable to resolve expression")
 
+            # build the a_x expressions by adding the s_x expressions together and multiplying by the appropriate p_k-th roots of unity
             for j in range(c_size):
                 a_x.append(etimes(esumlist(s_x[offset:offset + c_size]), (1, c_size)))
                 for k in range(1, c_size):
@@ -358,6 +393,8 @@ def roots_to_radicals(rnum):
         all_a.append(a)
         all_a_x.append(a_x)
 
+    # on last iteration, a-sums are single roots of unity. bit_reverse() reorders these roots
+    # x: list of expressions for all n-th roots of unity in order
     x = [1] + [None] * (rnum - 1)
     for i in range(len(a_x)):
         xind = power_cycle[bit_reverse(i, facts)]
