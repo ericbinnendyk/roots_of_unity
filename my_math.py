@@ -8,10 +8,23 @@ def lcm(x, y):
 def gcd(x, y):
     return gcd_abs(abs(x), abs(y))
 
+# for the purposes of this module, gcd(0, 0) == 0
 def gcd_abs(x, y):
+    if x == 0:
+        return y
     if y % x == 0:
         return x
-    return gcd(y % x, x)
+    return gcd_abs(y % x, x)
+
+def gcd_list(l):
+    if len(l) == 1:
+        return l[0]
+    ans = l[0]
+    for i in range(1, len(l)):
+        ans = gcd(ans, l[i])
+        if ans == 1:
+            return ans
+    return ans
 
 # finds the largest exp-th power that is a divisor of num
 def largest_power_divisor(num, exp):
@@ -89,3 +102,15 @@ def factorize(num):
         i += 1
     return facts
 
+# finds the prime-power decomposition of a number
+def prime_powers(num):
+    facts = factorize(num)
+    decomp = []
+    prev_fact = 1
+    for fact in facts:
+        if fact != prev_fact:
+            decomp.append(fact)
+        else:
+            decomp[-1] *= fact
+        prev_fact = fact
+    return decomp
