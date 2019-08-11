@@ -50,6 +50,15 @@ def esumlist(el):
     else:
         return eplus(esumlist(el[:-1]), el[-1])
 
+# finds the product of a list of expressions
+def eprodlist(el):
+    if len(el) == 0:
+        raise RuntimeError("Cannot find the product of an empty list")
+    if len(el) == 1:
+        return el[0]
+    else:
+        return etimes(eprodlist(el[:-1]), el[-1])
+
 # adds two expressions
 def eplus(e1, e2):
     if type(e1) == int:
@@ -60,6 +69,8 @@ def eplus(e1, e2):
             return e1
 
     if type(e1) == int:
+        if type(e2) == int:
+            return e1 + e2
         if type(e2) == tuple:
             assert(type(e2[1]) == int)
             assert(type(e2[0]) != tuple)
