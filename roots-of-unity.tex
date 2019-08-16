@@ -1,0 +1,108 @@
+\documentclass{article}
+\title{Script to find radical expressions for p-th roots of unity}
+\author{Eric Binnendyk}
+\date{\today}
+
+\usepackage{amsmath,amsfonts,amssymb,graphicx}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction and preliminaries}
+	In this document, I describe a Python program that I wrote to calculate expressions for the $ p $th roots of unity in radicals, where $ p $ is prime.\\
+	An intuitive way to understand algebraic numbers is by expressing them in radicals. Such expressions consist of sums of rational numbers and $ n $th roots of simpler radical expressions, where $ n $ can be any positive integer. The Abel-Ruffini theorem says that polynomials of degree up to $ 4 $ with rational coefficients have radical expressions for their roots.\\
+	An nth \textit{root of unity} is a complex number of the form $ e^{2k \pi i/ n} = \cos{2k \pi/n} + i \sin{2k \pi/n} $ for some non-negative integer $ k < n $, with a magnitude of 1 and an argument $ k/n $ of a full $ 2 \pi $ radians. A \textit{primitive} $ n $th root of unity requires additionally that $ k $ and $ n $ be relatively prime. A primitive $ n $th root of unity is not an $ m $th root of unity for any $ m < n $.\\
+	If $ x $ is an $ n $th root of unity, then $ x $ satisfies the polynomial $ x^n - 1 $. This polynomial is factorizable as $ (x - 1)(\sum_{k = 0}^{n - 1} x^k) $. Thus, if $ x \ne 1 $, $ x $ also satisfies $ (\sum_{k = 0}^{n - 1} x^k) $.\\
+	We know that radical expressions exist for all roots of unity. For example, to get the $ p $th roots of unity, we can just write $ \sqrt[p]{1} $ for all $ p $ choices of the complex $ p $th root. However, this expression is not desirable for two reasons:
+	\begin{enumerate}
+		\item It does not only describe primitive $ p $th roots but also describes $ 1 $, obtained in the previous expression when $ i = 0 $. When $ p $ is prime, there are $ p - 1 $ primitive $ p $th roots of unity.
+		\item It does not separate into radical expressions for the real and imaginary parts. An example of an expression that does not have these problems is
+	\end{enumerate}
+$$ e^{2 \pi i/5} = \frac{-1 + \sqrt{5} + \sqrt{-10 - 2 \sqrt{5}}}{4} $$
+	This is an expression for a primitive $ 5 $th root of unity as the root of the quartic polynomial $ x^4 + x^3 + x^2 + x^1 + 1 $, which is satisfied by all four primitive $ 5 $th roots of unity. Changing the signs on this expressions yields the other three primitive $ 5 $th roots, but not 1.\\
+$$ e^{4 \pi i/5} = \frac{-1 - \sqrt{5} + \sqrt{-10 + 2 \sqrt{5}}}{4} $$
+$$ e^{6 \pi i/5} = \frac{-1 - \sqrt{5} - \sqrt{-10 + 2 \sqrt{5}}}{4} $$
+$$ e^{8 \pi i/5} = \frac{-1 + \sqrt{5} - \sqrt{-10 - 2 \sqrt{5}}}{4} $$
+	By a theorem of Galois, it follows from the fact that the Galois group of $ p $th roots of unity is always Abelian that radical expressions satisfying the above two constraints must exist for the $ p $th roots of unity, for all primes $ p $. This is what my script does, and here I describe the underlying algorithm.\\
+\section{Symmetric sums}
+	The first step in the algorithm is to arrange the primitive roots of unity into an order called a \textit{power cycle}. Such a permutation works by starting with $ x $, where $ x $ can be any primitive root of unity but is typically $ e^{2\pi i/p} $, with an argument of $ 1/p $ of a circle --- the first root encountered when going counterclockwise around the complex plane from 1. Because $ x^p = 1 $ (and $ x^k \ne 1 $ for all $ k < p $), the full set of $ p - 1 $ primitive roots of unity can be assigned the following \textit{canonical expressions}: $ x^1, x^2, x^3, \dots, x^{n - 1} $. To permute these roots into a power cycle, we write $ x^1, x^n, x^{n^2}, x^{n^3}, \dots, x^{n^{p - 2}} $, etc. for a special integer $ n $. These roots have the canonical expressions $ x^1, x^{n \mod p}, x^{n^2 \mod p}, \dots, x^{n^{p - 1} \mod p} $. We need to choose $ n $ such that the cycle contains every primitive root once. Equivalently, the exponents $ 1, n \mod p, n^2 \mod p, \dots, n^{p - 1} \mod p $ must all be distinct. A value of $ n $ satisfying this requirement is called a \textit{primitive root} modulo $ p $ (not to be confused with a primitive root of unity, which is an entirely different concept).
+	For example, for $ p = 13 $, we see that $ n = 2 $ is a primitive root mod 13 leading to the following power cycle:
+	$$ x^1, x^2, x^4, x^8, x^3, x^6, x^{12}, x^{11}, x^9, x^5, x^{10}, x^7 $$
+	(In contrast, $ n = 3 $ is not a primitive root mod 13; the cycle $ x^1, x^3, x^9 $ has period 3 before repeating to $ x^{9 \times 3 \mod 13} = x^1 $.)\\
+	In any sum of $ p $th roots of unity with integer coefficients, define a \textit{conjugate permutation} to be the operation that replaces all terms of the form $ ax^k $ in the sum by $ ax^{nk \mod p} $, where $ n $ is the same primitive root mod $ p $ chosen above. For example, when $ p = 13 $, the conjugate permutation of $ x^1 + x^8 + x^{10} $ is $ x^2 + x^3 + x^7 $. Integers by themselves are self-conjugate, so the conjugate of $ 2 + 3x^{11} $ is $ 2 + 3x^9 $.\\
+	Typically, the conjugate permutation of an expression needs to be taken $ p - 1 $ times to return to the same expression, as that is the period of the power cycle. However, in some symmetric expressions, the conjugate can be taken fewer than $ p - 1 $ times to obtain the same expression. For example, when $ n = 13 $, the expression $ x^2 + x^6 + x^5 $ has period 4:
+	$$ x^2 + x^6 + x^5 \rightarrow x^4 + x^{12} + x^{10} \rightarrow x^8 + x^{11} + x^7 \rightarrow x^3 + x^9 + x^1 \rightarrow x^6 + x^5 + x^2 = x^2 + x^6 + x^5 $$
+	We see that conjugation replaced each exponent with the one four terms ahead in the power cycle. Because the expression was invariant under this transformation, the same term with the shifted exponent must have been in the original expression, as well as the one with the exponent shifted by 8. Shifting by 12 wraps the exponent around to its original value, so these are the only three terms needed for the expression to be invariant under four conjugate permutations.\\
+	The minimum number of conjugate permutations that are invariant on a particular sum of $ p $th roots of unity is a factor $ f $ of $ p - 1 $, and for each exponent $ k $ present in the original expression, there is an equivalent term with the exponent $ kn^f \mod p $. Repeating this process reveals that non-integer terms must come in sets of $ (p - 1)/f $, and the sum can be said to have a \textit{symmetry} of $ (p - 1)/f $.\\
+	Note that in the extreme case, an expression can have a symmetry of $ p - 1 $, in which case it has the form $ a + \sum_{k = 1}^{p - 1} bx^k $. But the primitive $ p $th roots of unity satisfy the polynomial $ \sum_{k = 0}^{p - 1} x^k $, so the sum can be rewritten as $ a - b $. Therefore, any expression with symmetry $ p - 1 $ evaluates to an integer.\\
+	The above definition defines the symmetry of an expression of the form $ a_0 + a_1 x^1 + a_2 x^2 + \dots + a_{p - 1} x^{p - 1} $, where $ a_0, a_1, \dots, a_{p - 1} $ are integers. We can define a \textit{multisum} of roots of unity to be a sum of products of $ q $th roots of unity for different primes $ q $. Such an expression has the form
+	$$ S = \sum_{k_1, k_2, k_3, \dots} (a_{k_1, k_2, k_3, \dots} (x_1)^{k_1} (x_2)^{k_2} (x_3)^{k_3} \dots) $$
+	where $ x_1 = e^{2\pi/q_1}, x_2 = e^{2\pi/q_2}, x_3 = e^{2\pi/q_3}, \dots $ are roots of unity whose degrees are distinct primes $ q_1, q_2, q_3, \dots $ and the $ a_{k_1, k_2, k_3, \dots} $ values can be any integers. We can define the symmetry of the above multisum $ S $ with respect to one of the primes, say $ q_1 $. First we rewrite $ S $ as follows:
+	$$ \sum_{k_1 = 0}^{q_1 - 1} (A_{k_1} (x_1)^{k_1}) $$
+	where
+	$$ A_{k_1} = \sum_{k_2, k_3, \dots} (a_{k_1, k_2, k_3 \dots} (x_2)^{k_2} (x_3)^{k_3} \dots) $$
+	Then the symmetry with respect to $ q_1 $ can be determined by checking for the existence of cycles of the form $ A_k (x_1)^k $ whose coefficients $ A_k $ are equal.\\
+	It is clear that the same multisum can have different values of symmetry with respect to different primes $ q_1, q_2, \dots $, depending on the values of the coefficients that appear when we pull different roots of unity out of the equation (...).\\
+	Just like how a sum of $ p $th roots with a symmetry of $ p - 1 $ can be simplified into an integer, a multisum with a symmetry of $ q_1 - 1 $ with respect to $ q_1 $st roots can be simplified by eliminating $ q_1 $st roots from the expression, as follows:
+    $$ \sum_{k_1 = 0}^{q_1 - 1} (A_{k_1} (x_1)^{k_1}) = A_0 (x_1)^0 + \sum_{k_1 = 1}^{q_1 - 1} A_1 (x_1)^{k_1} \text{ (by symmetry)} $$
+    $$ = A_0 + A_1 \sum_{k_1 = 1}^{q_1 - 1} (x_1)^{k_1} $$
+    $$ = A_0 + A_1 \cdot (-1) $$
+    $$ = A_0 - A_1 $$
+    This results in a multisum of $ q_2 $nd, $ q_3 $rd, \dots roots only.\\
+	Because sums and multisums with a symmetry of $ p - 1 $ can be simplified by eliminating $ p $th roots of unity, we may imagine that expressions with higher symmetry are ``simpler'' than those with lower symmetry. This intuition will be validated as we will see that higher symmetries indeed lend themselves to shorter expressions in radicals than do lower symmetries.\\
+\section{Crux of the algorithm}
+	The crucial step in my algorithm is a way to simplify a sum in terms of sums with higher symmetry.\\
+	Consider a sum $ A_0 $ of $ p $th roots of unity with symmetry $ (p - 1)/f $, $ f > 1 $. Let $ q $ be any prime factor of $ f $. The objective of this procedure is to develop sums and multisums with a symmetry of $ q(p - 1)/f $ with respect to the $ p $th roots, and express the sum $ A_0 $ in terms of them.\\
+	Apply the conjugate permutation $ f/q $ times to obtain a new sum $ A_1 $. Repeat this $ q $ times to obtain sums $ A_2, A_3, \dots, A_{q - 1} $ before reaching $ A_0 $ again. The base conjugate permutation gets applied $ f/q $ times for $ q $ steps, for a total of $ f $ applications. Because $ A_0 $ has a symmetry of $ p/f $, the $ f $ successive applications of the conjugate permutation result in a return to $ A_0 $ at the end.\\
+\subsection{General simplification procedure}
+	Clearly the sum $ S_0 := \sum_{k = 0}^{q - 1} A_k $ has a symmetry of $ (p - 1)/(f/q) = q(p - 1)/f $, as applying the conjugate permutation $ f/q $ times will cyclically permute the terms. Now consider the $ q - 1 $ multisums $ S_j := \sum_{k = 0}^{q - 1} y^{jk} A_k $, where $ 1 \le j \le q - 1 $ and $ y $ is a primitive $ q $th root of unity. The sequence $ S_0, S_1, S_2, \dots S_{q - 1} $ forms the \textit{discrete Fourier transform} of the terms $ A_k $.\\
+    The sum $ S_0 $, with a symmetry $ q $ times that of $ A_0 $, is already simpler than $ A_0 $. Now we must express $ S_1, S_2, \dots, S_{q - 1} $ in terms of simpler sums.\\
+\subsubsection{The $ q $th power}
+    Consider $ (S_1)^q $, which is equal to $ (\sum_{k = 0}^{q - 1} y^k A_k)^q $. This can be expanded, grouping alike powers of $ y $, to yield the sum
+	$$ \sum_{k = 0}^{q - 1} B_k y^k $$
+	where:
+    $$ B_0 = A_0 \cdot \text{($ q - 3 $ factors omitted)} \cdot A_0 \cdot A_0 $$
+    $$ + A_0 \cdot \text{($ q - 3 $ factors omitted)} \cdot A_1 \cdot A_{q - 1} $$
+    $$ + A_0 \cdot \text{($ q - 3 $ factors omitted)} \cdot A_2 \cdot A_{q - 2} $$
+	$$ + \dots $$
+    $$ + A_{k_0} \cdot \dots \cdot A_{k_{q - 1}} \text{ where } k_0 + \dots + k_{q - 1} \mod q = 0 $$
+    and in general:
+    $$ B_j = \sum_{k_0, \dots, k_{q - 1}} \prod_{n = 0}^{q - 1} A_{k_n} $$
+    where $ k_0, \dots, k_{q - 1} $ ranges over all choices such that $ k_0 + \dots + k_{q - 1} \mod q = j $.\\
+    The values $ A_0 \dots A_{q - 1} $ are sums of $ p $th roots of unity with symmetry $ (p - 1)/f $. Because symmetry is preserved under multiplication of sums (the proof is omitted), the expressions $ \prod_{n = 0}^{q - 1} A_{k_n} $ also have symmetry of $ (p - 1)/f $. In fact, if some $ B_j $ contains the term
+    $$ \prod_{n = 0}^{q - 1} A_{k_n} $$
+    in its sum, for some $ k_n $, it will also contain the terms
+    $$ \prod_{n = 0}^{q - 1} A_{k_n + 1 \mod q} $$
+    $$ \prod_{n = 0}^{q - 1} A_{k_n + 2 \mod q} $$
+    all the way up to
+    $$ \prod_{n = 0}^{q - 1} A_{k_n - 1 \mod q} $$
+    as the subscripts on these terms sum to the same value, modulo $ q $.\\
+    Applying a base conjugate permutation $ f/q $ times to each term above yields the next term, with the last term wrapping back around to the first. (Again, the proof is omitted.) Thus, the sum of the $ q $ terms is invariant under the operation and has a symmetry of $ q(p - 1)/f $. Because each $ B_j $ consists entirely of such sums, each $ B_j $ has a symmetry of $ q(p - 1)/f $ as well.\\
+    Thus, $ S_1^q $, despite being a multisum rather than a sum, is simpler than $ A_0 $ because it has a symmetry of $ q(p - 1)/f $ rather than $ (p - 1)/f $ with respect to $ p - 1 $.\\
+    By equivalent arguments, it can be shown that $ S_2^q, \dots, S_{q - 1}^q $ also have a symmetry of $ q(p - 1)/f $. From now on, we will call these expressions $ T_1, T_2, \dots, T_{q - 1} $.\\
+\subsubsection{Back to $ A_0 $}
+    We now have $ q $ expressions that are simpler than $ A_0 $:\\
+    $$ S_0 = A_0 + A_1 + \dots + A_{q - 1} $$
+    $$ T_1 = (A_0 + y^1 A_1 + \dots + y^{q - 1} A_{q - 1})^q $$
+    $$ T_2 = (A_0 + y^2 A_1 + \dots + y^{q - 2} A_{q - 1})^q $$
+    $$ T_3 = (A_0 + y^3 A_1 + \dots + y^{q - 3} A_{q - 1})^q $$
+    all the way up to
+    $$ T_{q - 1} = (A_0 + y^{q - 1} A_1 + \dots + y^1 A_{q - 1})^q $$
+    Using the \textit{inverse discrete Fourier transform} we can obtain values for $ A_0, A_1, \dots, A_{q - 1} $. In particular,
+    $$ A_0 = \frac{1}{q} (S_0 + \sqrt[q]{T_1} + \dots + \sqrt[q]{T_{q - 1}}) $$
+    for some choices of complex $ q $th root. The choice of root needed can be determined by finding a complex floating-point expression for $ S_k $ and comparing it to all $ q $ choices of $ q $th root of $ T_k $.\\
+    The expressions $ T_1 \dots T_{q - 1} $ have symmetry of $ 1 $ with respect to $ q $th roots of unity. They can be simplified by increasing the symmetry of $ q $th roots as described below in ``Extension to multisums'', eventually allowing the $ q $th roots to be removed so that simplification on the $ p $th roots can resume.\\
+    In computing terminology, the algorithm recursively calls itself on $ S_0, T_1, T_2, \dots $ to simplify them after deriving them as sums.\\
+\subsection{Special case: $ q = 2 $}
+    When the factor $ q $ of $ f $ chosen is $ 2 $, the above algorithm simplifies and no multisums are needed to simplify $ A_0 $. We have $ S_0 = A_0 + A_1 $ and $ S_1 = A_0 - A_1 $, leading to $ T_1 = (A_0 - A_1)^2 $. The expressions $ S_0 $ and $ T_1 $ have symmetry $ 2(p - 1)/f $. Then $ A_0 $ can be written as $ \frac{1}{2} (S_0 \pm \sqrt{T_1}) $, where the sign can be determined by floating-point calculation.\\
+\subsection{Extension to multisums}
+    The above algorithm is described as acting on sums of $ p $th roots of unity for a single $ p $. Because some of the simplified expressions returned by the algorithm are multisums, we need a way to simplify those too. In fact, the algorithm naturally extends to multisums. If $ A_0 $ is a multisum of $ p_1 $st, $ p_2 $nd, etc. roots of unity with a symmetry of $ (p_1 - 1)/f $ with respect to $ p_1 $, and $ q $ is a prime factor of $ f $, then expressions $ S_0, T_1, \dots, T_{q - 1} $ can be derived. The expression $ S_0 $ is a multisum of $ p_1 $st, $ p_2 $nd, etc. roots, like $ A_0 $, with a symmetry of $ q(p_1 - 1)/f $. The expressions $ T_1, \dots, T_{q - 1} $ have $ q $th roots added to the multisum and have symmetries of $ q(p_1 - 1)/f $ with respect to $ p_1 $ and $ 1 $ with respect to $ q $.\\
+\subsection{Base case: symmetry of $ p - 1 $}
+    The above algorithm allows one to simplify a sum or multisum of $ p $th roots of unity by recursively defining it in terms of expressions with increased symmetry with respect to $ p $. Eventually we reach a point at which the symmetry becomes $ p - 1 $. At this point, the expression is of the form
+    $$ A_0 = B_0 + B_1 x^1 + B_1 x^2 + \dots + B_1 x^{p - 1} $$
+    where $ B_0 $ and $ B_1 $ are sums or multisums of $ p_2 $nd, $ p_3 $rd, etc. roots of unity if $ A_0 $ is a multisum, or single integers if $ A_0 $ is not. As described in ``Symmetric sums'', we then have:
+    $$ A_0 = B_0 - B_1 $$
+    expressing $ A_0 $ without $ p $th roots and reducing the sum's dimension by 1.\\
+    If $ A_0 $ was a single sum, not a multisum, it is now expressed as a single integer. This is the ultimate base case, because all integers in the final radical expression are derived in this way.\\
+\end{document}
