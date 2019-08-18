@@ -4,14 +4,24 @@
 \date{\today}
 
 \usepackage{amsmath,amsfonts,amssymb,graphicx}
+\usepackage{hyperref}
 
 \begin{document}
 
 \maketitle
 
-\section{Introduction and preliminaries}
+\section{Introduction and History}
     In this document, I describe a Python program that I wrote to calculate expressions for the $ p $th roots of unity in radicals, where $ p $ is prime.\\
     \\
+    The result presented here derives heavily from earlier research.\\
+    \\
+    The study of radical expressions for roots of unity began with Gauss's discovery of an expression for 17th roots of unity using only square roots \cite{17gon}. Gauss went on to prove that all roots of unity could be expressed in radicals and developed a method to find such expressions \cite{rootsunity}. A similar method was also developed by Vandermonde \cite{rootsunity-misc}. The algorithm I describe here is based on Gauss's method.\\
+    \\
+    Later, Galois developed a theory of solvable algebraic equations. One result of this theory is that any polynomial whose Galois group is Abelian is solvable. Applying this result to cyclotomic polynomials leads to a second proof of Gauss's result of the existence of radical expressions for roots of unity.\cite{weber-keckeisen}\\
+    \\
+    Others have developed algorithms based on Gauss's method to find radical expressions for roots of unity, including Andreas Weber \cite{weber} and Lau Jing Feng \cite{feng}. However, many of these algorithms evaluated multisums such as $ T_1 = \sum_{k = 0}^{q - 1} \sum_{j = 0}^{p - 1} B_{kl} x^l y^k $ by solving for the values $ \sum_{j = 0}^{p - 1} B_{kl} x^l $ and substituting in known expressions for the $ q $th roots of unity $ y^k $. This method can be refined by simplifying the entire expression as if it were a single $ q $th root of unity, into pieces expressed as sums of $ p $th roots of unity, which can then further be simplified into nested radical expressions. The refined method avoids performing direct arithmetic on large and cumbersome radical expressions for $ y $th roots of unity, and in addition the output expressions tend to be shorter. However, Weber's algorithm has the benefit that it only requires one calculation to compute the values $ T_1, T_2, \dots, T_{q - 1} $ (in my notation), an optimization which I have not implemented into my algorithm yet.\\
+    \\
+\section{Preliminaries}
     An intuitive way to understand algebraic numbers is by expressing them in radicals. Such expressions consist of sums of rational numbers and $ n $th roots of simpler radical expressions, where $ n $ can be any positive integer. The Abel-Ruffini theorem says that polynomials of degree up to $ 4 $ with rational coefficients have radical expressions for their roots. Some higher degree polynomials also have radical expressions for their roots.\\
     \\
     An nth \textit{root of unity} is a complex number of the form $ e^{2k \pi i/n} = \cos{2k \pi/n} + i \sin{2k \pi/n} $ for some integer $ k $ where $ 0 \le k < n $, with a magnitude of 1 and an argument $ k/n $ of a full $ 2 \pi $ radians. A \textit{primitive} $ n $th root of unity requires additionally that $ k $ and $ n $ be relatively prime. As a consequence of this definition, a primitive $ n $th root of unity is not an $ m $th root of unity for any $ m < n $.\\
@@ -25,12 +35,12 @@
     \end{enumerate}
     An example of an expression that does not have these two problems is
 $$ e^{2 \pi i/5} = \frac{-1 + \sqrt{5} + \sqrt{-10 - 2 \sqrt{5}}}{4} $$
-    This is an expression for a primitive $ 5 $th root of unity as the root of the quartic polynomial $ x^4 + x^3 + x^2 + x^1 + 1 $, which is satisfied by all four primitive $ 5 $th roots of unity. Changing the signs on this expressions yields the other three primitive $ 5 $th roots, but not 1.\\
+    This is an expression for a primitive $ 5 $th root of unity as the root of the cyclotomic polynomial $ x^4 + x^3 + x^2 + x^1 + 1 $, which is satisfied by all four primitive $ 5 $th roots of unity. Changing the signs on this expressions yields the other three primitive $ 5 $th roots, but not 1.\\
     \\
 $$ e^{4 \pi i/5} = \frac{-1 - \sqrt{5} + \sqrt{-10 + 2 \sqrt{5}}}{4} $$
 $$ e^{6 \pi i/5} = \frac{-1 - \sqrt{5} - \sqrt{-10 + 2 \sqrt{5}}}{4} $$
 $$ e^{8 \pi i/5} = \frac{-1 + \sqrt{5} - \sqrt{-10 - 2 \sqrt{5}}}{4} $$
-    By a theorem of Galois, it follows from the fact that the Galois group of $ p $th roots of unity is always Abelian that radical expressions satisfying the above two constraints must exist for the $ p $th roots of unity, for all primes $ p $. This is what my program does, and here I describe the underlying algorithm.\\
+    By a theorem of Galois, it follows from the fact that the Galois group of $ p $th roots of unity is always Abelian that radical expressions describing only primitive roots of unity must exist for the $ p $th roots of unity, for all primes $ p $. In fact, this existence was known before Galois and was published by Gauss in \textit{Disquisitiones Arithmeticae} \cite{gauss}. My program generates such expressions, and here I describe the underlying algorithm.\\
     \\
 \section{Symmetric sums}
     The first step in the algorithm is to arrange the primitive roots of unity into an order called a \textit{power cycle}. Such a permutation works by starting with $ x $, where $ x $ can be any primitive root of unity but is typically $ e^{2\pi i/p} $, with an argument of $ 1/p $ of a circle --- the first root encountered when going counterclockwise around the complex plane from 1. Because $ x^p = 1 $ (and $ x^k \ne 1 $ for all $ k < p $), the full set of $ p - 1 $ primitive roots of unity can be assigned the following \textit{canonical expressions}: $ x^1, x^2, x^3, \dots, x^{n - 1} $. To permute these roots into a power cycle, we write $ x^1, x^n, x^{n^2}, x^{n^3}, \dots, x^{n^{p - 2}} $, etc. for a special integer $ n $. These roots have the canonical expressions $ x^1, x^{n \mod p}, x^{n^2 \mod p}, \dots, x^{n^{p - 1} \mod p} $. We need to choose $ n $ such that the cycle contains every primitive root once. Equivalently, the exponents $ 1, n \mod p, n^2 \mod p, \dots, n^{p - 1} \mod p $ must all be distinct. A value of $ n $ satisfying this requirement is called a \textit{primitive root} modulo $ p $ (not to be confused with a primitive root of unity, which is an entirely different concept).\\
@@ -131,4 +141,20 @@ $$ e^{8 \pi i/5} = \frac{-1 + \sqrt{5} - \sqrt{-10 - 2 \sqrt{5}}}{4} $$
     expressing $ A_0 $ without $ p $th roots and reducing the sum's dimension by 1.\\
     \\
     If $ A_0 $ was a single sum, not a multisum, it is now expressed as a single integer. This is the ultimate base case, because all integers in the final radical expression are derived in this way.\\
+\begin{thebibliography}{7}
+    \bibitem{gauss}
+        Gauss, Carl F. \textit{Disquisitiones Arithmeticae}. Yale University Press. pp. 359-360, 1965. ISBN 0-300-09473-6.
+    \bibitem{17gon}
+        Lynn, Ben. ``Number Theory - The Heptadecagon.'' Stanford Applied Cryptography Group, \url{https://crypto.stanford.edu/pbc/notes/numbertheory/17gon.html}. Accessed August 17, 2019.
+    \bibitem{rootsunity}
+        Lynn, Ben. ``Number Theory - Roots of Unity.'' Stanford Applied Cryptography Group, \url{https://crypto.stanford.edu/pbc/notes/numbertheory/rootsunity.html}. Accessed August 17, 2019.
+    \bibitem{rootsunity-misc}
+        Lynn, Ben. ``Miscellany - Roots of Unity.'' Stanford Applied Cryptography Group, \url{https://crypto.stanford.edu/pbc/notes/misc/rootsunity.html}. Accessed August 17, 2019.
+    \bibitem{weber-keckeisen}
+        Weber, Andreas; Keckeisen, Michael. \href{http://cg.cs.uni-bonn.de/personal-pages/weber/publications/pdf/WeberA/WeberKeckeisen99a.pdf}{``Solving Cyclotomic Polynomials by Radical Expressions''} (PDF). Accessed August 17, 2019.
+    \bibitem{weber}
+        Weber, Andreas. ``Computing radical expressions for roots of unity.'' \textit{ACM SIGSAM Bulletin}, 30, 1996, pp. 11-20. 10.1145/240065.240070.
+    \bibitem{feng}
+        Lau Jing Feng. ``On solvable septics.'' \textit{ScolarBank@NUS Repository}. January 7, 2005.
+\end{thebibliography}
 \end{document}
