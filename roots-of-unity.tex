@@ -1,6 +1,6 @@
 \documentclass{article}
 \title{Script to find radical expressions for p-th roots of unity}
-\author{Eric Binnendyk}
+\author{Eric R. Binnendyk \\ ericabq@gmail.com}
 \date{\today}
 
 \usepackage{amsmath,amsfonts,amssymb,graphicx}
@@ -10,9 +10,12 @@
 
 \maketitle
 
-\section{Introduction and History}
-    In this document, I describe a Python program that I wrote to calculate expressions for the $ p $th roots of unity in radicals, where $ p $ is prime.\\
+\begin{abstract}
+    In this document, I describe the algorithm underlying a Python program that I wrote to calculate expressions for the $ p $th roots of unity in radicals, where $ p $ is prime. This program is available on my GitHub at \url{https://github.com/ericbinnendyk/roots_of_unity/blob/master/refined_nth_roots.py}.\\
     \\
+\end{abstract}
+
+\section{Introduction and History}
     The result presented here derives heavily from earlier research.\\
     \\
     The study of radical expressions for roots of unity began with Gauss's discovery of an expression for 17th roots of unity using only square roots \cite{17gon}. Gauss went on to prove that all roots of unity could be expressed in radicals and developed a method to find such expressions \cite{rootsunity}. A similar method was also developed by Vandermonde \cite{rootsunity-misc}. The algorithm I describe here is based on Gauss's method.\\
