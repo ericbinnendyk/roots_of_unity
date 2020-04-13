@@ -322,35 +322,36 @@ def root_sum(a0, dims, syms):
         #print(expr_to_latex(a0_x))
         return a0_x
 
-if len(sys.argv) >= 2:
-    rnum = int(sys.argv[1])
-else:
-    raise RuntimeError("No input value")
-if len(sys.argv) >= 3:
-    which = int(sys.argv[2])
-    if which < 0 or which >= rnum:
-        raise RuntimeError("Second argument must be between 0 and first argument minus one")
-else:
-    which = 1
+if __name__ == '__main__':
+    if len(sys.argv) >= 2:
+        rnum = int(sys.argv[1])
+    else:
+        raise RuntimeError("No input value")
+    if len(sys.argv) >= 3:
+        which = int(sys.argv[2])
+        if which < 0 or which >= rnum:
+            raise RuntimeError("Second argument must be between 0 and first argument minus one")
+    else:
+        which = 1
 
-multiple_roots = len(sys.argv) >= 4
+    multiple_roots = len(sys.argv) >= 4
 
-if multiple_roots:
-    num_roots = int(sys.argv[3])
-    # rnum must be prime for this to work
-    if len(factorize(rnum)) != 1:
-        raise RuntimeError("Degree of root must be prime to define root sum")
-    if (rnum - 1) % num_roots != 0:
-        raise RuntimeError("Number of roots in sum must be factor of degree minus one")
-    gap_size = (rnum - 1) // num_roots
-    power_cycle = make_power_cycle(rnum)
-    i = power_cycle.index(which)
-    l = [0] * rnum
-    for j in range(num_roots):
-        l[power_cycle[i]] += 1
-        i = (i + gap_size) % (rnum - 1)
-    result = root_sum(l, [rnum], [num_roots])
-else:
-    result = root_to_radicals(rnum, which)
+    if multiple_roots:
+        num_roots = int(sys.argv[3])
+        # rnum must be prime for this to work
+        if len(factorize(rnum)) != 1:
+            raise RuntimeError("Degree of root must be prime to define root sum")
+        if (rnum - 1) % num_roots != 0:
+            raise RuntimeError("Number of roots in sum must be factor of degree minus one")
+        gap_size = (rnum - 1) // num_roots
+        power_cycle = make_power_cycle(rnum)
+        i = power_cycle.index(which)
+        l = [0] * rnum
+        for j in range(num_roots):
+            l[power_cycle[i]] += 1
+            i = (i + gap_size) % (rnum - 1)
+        result = root_sum(l, [rnum], [num_roots])
+    else:
+        result = root_to_radicals(rnum, which)
 
-print(expr_to_latex(result))
+    print(expr_to_latex(result))
