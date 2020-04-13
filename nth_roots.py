@@ -409,4 +409,4 @@ x = roots_to_radicals(rnum)
 # (uncomment to display all roots of unity and not just one)
 '''for i in range(1, rnum):
     print(expr_to_latex(x[i]), '\\\\')'''
-print(expr_to_latex(x[9]))
+print(expr_to_latex(x[1]))
