@@ -1,6 +1,10 @@
 from math import pi
 from cmath import exp
 tau = 2*pi
+global be_quiet
+be_quiet = False
+global float_check
+float_check = True
 
 def lcm(x, y):
     return x*y//gcd(x, y)
@@ -58,17 +62,17 @@ def largest_power_divisor(num, exp):
 
 # determines whether two complex floating point values _probably_ represent the same number
 def float_equal(f1, f2):
+    if not float_check:
+        return True
     err = abs(f2 - f1)/(max(abs(f1), abs(f2)) + 1)
-    if err <= 1e-12:
-        return True
-    elif err <= 1e-10:
-        print("Warning: Two \"equal\" floating point numbers differ by percent error > 10^-12")
-        return True
-    elif err <= 1e-8:
-        print("Warning: Two \"equal\" floating point numbers differ by percent error > 10^-10")
-        return True
-    elif err <= 1e-6:
-        print("Warning: Two \"equal\" floating point numbers differ by percent error > 10^-8")
+    if not be_quiet:
+        if err <= 1e-10:
+            print("Warning: Two \"equal\" floating point numbers differ by percent error > 10^-12")
+        elif err <= 1e-8:
+            print("Warning: Two \"equal\" floating point numbers differ by percent error > 10^-10")
+        elif err <= 1e-6:
+            print("Warning: Two \"equal\" floating point numbers differ by percent error > 10^-8")
+    if err <= 1e-6:
         return True
     return False
 
