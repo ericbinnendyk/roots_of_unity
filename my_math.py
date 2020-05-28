@@ -1,5 +1,6 @@
 from math import pi
 from cmath import exp
+from functools import reduce
 tau = 2*pi
 global be_quiet
 be_quiet = False
@@ -118,3 +119,9 @@ def prime_powers(num):
             decomp[-1] *= fact
         prev_fact = fact
     return decomp
+
+# product of all elements in a list
+def product(l):
+    if len(l) == 0:
+        return 1
+    return reduce((lambda x, y: x * y), l)
