@@ -175,7 +175,7 @@ def root_to_radicals(rnum, n):
         # rnum is prime
         l = [0] * rnum
         l[n] = 1
-        return root_sum(l, [rnum], [rnum - 1])
+        return multisum_to_radicals(l, [rnum], [rnum - 1])
     elif facts == [facts[0]] * len(facts):
         # rnum is prime power, p^x
         x = len(facts)
@@ -211,7 +211,7 @@ def root_to_radicals(rnum, n):
             n_mod = n % p
             l = [0] * p
             l[n_mod] = 1
-            ans = root_sum(l, [p], [p - 1])
+            ans = multisum_to_radicals(l, [p], [p - 1])
             for i in range(1, x):
                 which = ((n + p**i // 2) % p**(i + 1)) // p**i
                 ans = ['r', p, which, ans, 1]
@@ -233,95 +233,75 @@ def root_to_radicals(rnum, n):
         #    print(coeff)
         return eprodlist([root_to_radicals(decomp[i], coeffs[i]) for i in range(len(decomp))])
 
-def root_sum(a0, dims, degrees):
+def multisum_to_radicals(A, dims, degrees):
     if len(dims) > 1 and degrees[1] == 1:
-        return root_sum(remove_second_dim(a0, dims), [dims[0]] + dims[2:], [degrees[0]] + degrees[2:])
+        return multisum_to_radicals(remove_second_dim(A, dims), [dims[0]] + dims[2:], [degrees[0]] + degrees[2:])
 
-    # assert len(a0) == dims[0]
+    # assert len(A) == dims[0]
     # assert dims[i] % syms[i] == 0 for i in range(len(syms))
 
-    rnum = dims[0]
+    p = dims[0]
     d = degrees[0]
-    power_cycle = make_power_cycle(rnum)
+    power_cycle = make_power_cycle(p)
 
     if d == 1:
         if len(dims) == 1:
-            return a0[0] - a0[1]
+            return A[0] - A[1]
         else:
-            return root_sum(plus(a0[0], negate(a0[1])), dims[1:], degrees[1:])
+            return multisum_to_radicals(plus(A[0], negate(A[1])), dims[1:], degrees[1:])
 
-    if d == rnum - 1:
-        fact = 2
+    if d == p - 1:
+        c = 2
     else:
         facts = factorize(d)
-        fact = facts[-1]
+        c = facts[-1]
 
-    if fact == 2:
-        a1 = rconj(a0, dims, power_cycle[d // fact])
-        s0 = plus(a0, a1)
-        #print("s0 ==", s0)
-        s0_x = root_sum(s0, dims, [d // fact] + degrees[1:])
-        s1 = plus(a0, negate(a1))
-        #print("s1 ==", s1)
-        mult = gcd_list(flatten(s1, dims))
-        #print("mult ==", mult)
-        if mult == 0:
-            # s1 is matrix of zeros
-            s1_x = 0
-        else:
-            s1_div = mfactor(s1, dims, mult)
-            #print("s1_div ==", s1_div)
-            s1s = power(s1_div, dims, fact)
-            #print("s1s ==", s1s)
-            s1s_x = root_sum(s1s, dims, [d // fact] + degrees[1:])
-            s1_x = ['r', fact, 0, s1s_x, mult]
-            s1_float = to_float(s1, dims)
-            for i in range(fact):
-                if float_equal(s1_float, expr_to_float(s1_x)):
-                    break
-                s1_x = rtimes(1, s1_x)
-            if not float_equal(s1_float, expr_to_float(s1_x)):
-                raise RuntimeError("Unable to resolve expression")
-        a0_x = etimes(eplus(s0_x, s1_x), (1, fact))
-        #print(expr_to_latex(a0_x))
-        return a0_x
+    A_conj = []
+    for i in range(c):
+        A_conj.append(rconj(A, dims, power_cycle[d // c * i]))
+
+    S_0_dims = dims[:]
+    S_j_dims = dims[:]
+    if c != 2:
+        S_j_dims.insert(0, c)
+    S_0_degrees = degrees[:]
+    S_0_degrees[0] = d // c
+    S_j_power_c_degrees = S_0_degrees[:]
+    if c != 2:
+        S_j_power_c_degrees.insert(0, c - 1)
+
+    S = []
+    S.append(sumlist(A_conj))
+    if c == 2:
+        S.append(plus(A_conj[0], negate(A_conj[1])))
     else:
-        a = []
-        for i in range(fact):
-            a.append(rconj(a0, dims, power_cycle[d // fact * i]))
-        #print("a ==", a)
-        s = []
-        ss = []
-        s.append(sumlist(a))
-        ss.append(None)
-        cyc = make_cycle(fact)
-        for i in range(1, fact):
-            s.append(sumlist([xtimes(cyc[i * j % fact], a[j], dims) for j in range(fact)]))
-        #print("s ==", s)
-        mult = gcd_list(flatten(s[1], [fact] + dims))
-        for i in range(1, fact):
-            s_i_div = mfactor(s[i], [fact] + dims, mult)
-            ss.append(power(s_i_div, [fact] + dims, fact))
-        s_x = []
-        s_x.append(root_sum(s[0], dims, [d // fact] + degrees[1:]))
-        ss_x = []
-        ss_x.append(None)
-        for i in range(1, fact):
-            ss_x.append(root_sum(ss[i], [fact] + dims, [fact - 1] + [d // fact] + degrees[1:]))
-            s_i_x = ['r', fact, 0, ss_x[-1], mult]
-            s_i_float = to_float(s[i], [fact] + dims)
+        cyc = make_cycle(c)
+        for i in range(1, c):
+            S.append(sumlist([xtimes(cyc[i * j % c], A_conj[j], dims) for j in range(c)]))
+
+    S_x = []
+    S_x.append(multisum_to_radicals(S[0], dims, S_0_degrees))
+    for j in range(1, c):
+        divisor = gcd_list(flatten(S[j], S_j_dims))
+        if divisor == 0:
+            S_x.append(0)
+        else:
+            S_j_div = mfactor(S[j], S_j_dims, divisor)
+            S_j_div_power_c = power(S_j_div, S_j_dims, c)
+            S_j_div_power_c_x = multisum_to_radicals(S_j_div_power_c, S_j_dims, S_j_power_c_degrees)
+            S_x.append(['r', c, 0, S_j_div_power_c_x, divisor])
+            
+            S_j_float = to_float(S[j], S_j_dims)
             expr_found = False
-            for j in range(fact):
-                if float_equal(s_i_float, expr_to_float(s_i_x)):
+            for k in range(c):
+                if float_equal(S_j_float, expr_to_float(S_x[j])):
                     expr_found = True
                     break
-                s_i_x = rtimes(1, s_i_x)
+                S_x[j] = rtimes(1, S_x[j])
             if not expr_found:
                 raise RuntimeError("Unable to resolve expression")
-            s_x.append(s_i_x)
-        a0_x = etimes(esumlist(s_x), (1, fact))
-        #print(expr_to_latex(a0_x))
-        return a0_x
+    A_x = etimes(esumlist(S_x), (1, c))
+    return A_x
 
 if __name__ == '__main__':
     if len(sys.argv) >= 2:
@@ -351,7 +331,7 @@ if __name__ == '__main__':
         for j in range(num_roots):
             l[power_cycle[i]] += 1
             i = (i + gap_size) % (rnum - 1)
-        result = root_sum(l, [rnum], [(rnum - 1) // num_roots])
+        result = multisum_to_radicals(l, [rnum], [(rnum - 1) // num_roots])
     else:
         result = root_to_radicals(rnum, which)
 
