@@ -171,6 +171,8 @@ def root_to_radicals(rnum, n):
     n //= div
 
     facts = factorize(rnum)
+    if len(facts) == 0:
+        return 1
     if len(facts) == 1:
         # rnum is prime
         l = [0] * rnum
@@ -217,6 +219,8 @@ def root_to_radicals(rnum, n):
                 ans = ['r', p, which, ans, 1]
             return ans
     else:
+        # rnum has multiple distinct prime factors
+        # we express n as rnum/p1*a + rnum/p2*b + ... (mod rnum) where p1, p2... are factors in the prime power decomposition of rnum and a, b... are integers
         decomp = prime_powers(rnum)
         remainder = n
         rest = rnum
@@ -234,6 +238,7 @@ def root_to_radicals(rnum, n):
         return eprodlist([root_to_radicals(decomp[i], coeffs[i]) for i in range(len(decomp))])
 
 def multisum_to_radicals(A, dims, degrees):
+    print(A)
     if len(dims) > 1 and degrees[1] == 1:
         return multisum_to_radicals(remove_second_dim(A, dims), [dims[0]] + dims[2:], [degrees[0]] + degrees[2:])
 
@@ -309,29 +314,28 @@ if __name__ == '__main__':
     else:
         raise RuntimeError("No input value")
     if len(sys.argv) >= 3:
-        which = int(sys.argv[2])
-        if which < 0 or which >= rnum:
-            raise RuntimeError("Second argument must be between 0 and first argument minus one")
+        try:
+            which = int(sys.argv[2])
+        except:
+            which = 1
+        which = which % rnum
     else:
         which = 1
 
-    multiple_roots = len(sys.argv) >= 4
-
-    if multiple_roots:
-        num_roots = int(sys.argv[3])
+    if len(sys.argv) >= 4:
+        degree = int(sys.argv[3])
         # rnum must be prime for this to work
         if len(factorize(rnum)) != 1:
             raise RuntimeError("Degree of root must be prime to define root sum")
-        if (rnum - 1) % num_roots != 0:
-            raise RuntimeError("Number of roots in sum must be factor of degree minus one")
-        gap_size = (rnum - 1) // num_roots
+        if (rnum - 1) % degree != 0:
+            raise RuntimeError("Degree of sum must be factor of degree minus one")
         power_cycle = make_power_cycle(rnum)
         i = power_cycle.index(which)
         l = [0] * rnum
-        for j in range(num_roots):
+        for j in range((rnum - 1) // degree):
             l[power_cycle[i]] += 1
-            i = (i + gap_size) % (rnum - 1)
-        result = multisum_to_radicals(l, [rnum], [(rnum - 1) // num_roots])
+            i = (i + degree) % (rnum - 1)
+        result = multisum_to_radicals(l, [rnum], [degree])
     else:
         result = root_to_radicals(rnum, which)
 
