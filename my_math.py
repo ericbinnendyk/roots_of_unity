@@ -83,7 +83,12 @@ def r(degree, which):
 
 # finds the prime factors of a number
 def factorize(num):
+    if type(num) != int or num == 0:
+        raise RuntimeError("Invalid argument to factorize(): {}".format(num))
     facts = []
+    if num < 0:
+        facts.append(-1)
+        num = -num
     while num % 2 == 0:
         num //= 2
         facts.append(2)
@@ -125,3 +130,28 @@ def product(l):
     if len(l) == 0:
         return 1
     return reduce((lambda x, y: x * y), l)
+
+# to do: use faster algorithm
+def is_prime(n):
+    try:
+        return n > 0 and len(factorize(n)) == 1
+    except:
+        # number cannot be factorized
+        return False
+
+# express n as rnum/p1*a + rnum/p2*b + ... (mod rnum) where p1, p2... are the distinct prime powers whose values are given in decomp with product rnum, and a, b... are integers
+def prime_power_sum(n, decomp):
+    if decomp == []:
+        return []
+    rnum = product(decomp)
+    remainder = n
+    fact = decomp[0]
+    coeff = 0
+    while remainder % fact != 0:
+        coeff += 1
+        remainder = (remainder - rnum // fact) % rnum
+    return [coeff] + prime_power_sum(remainder // fact, decomp[1:])
+
+def square_free(n):
+    facts = factorize(n)
+    return all([facts[i + 1] > facts[i] for i in range(len(facts) - 1)])
