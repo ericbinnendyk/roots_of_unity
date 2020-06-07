@@ -1,4 +1,4 @@
-from my_math import factorize, r, float_equal, gcd, gcd_list, prime_powers
+from my_math import factorize, r, float_equal, gcd, gcd_list, prime_powers, is_prime, prime_power_sum, square_free
 from radical_expr import expr_to_float, etimes, eplus, rtimes, expr_to_latex, esumlist, copy, eprodlist
 import sys
 
@@ -35,7 +35,7 @@ def sumlist(ml):
 def times(m1, m2, dims):
     nrow = dims[0]
     assert nrow == len(m1) and nrow == len(m2)
-    ans = new_mat(dims)
+    ans = new_multisum(dims)
     for i in range(nrow):
         for j in range(nrow):
             k = (i + j) % nrow
@@ -77,17 +77,24 @@ def make_cycle(num):
     return cycle
 
 # creates a matrix of zeros with the specified number of rows and columns
-def new_mat(dims):
+def new_multisum(dims):
     if len(dims) == 1:
         return [0] * dims[0]
     m = []
     for i in range(dims[0]):
-        m.append(new_mat(dims[1:]))
+        m.append(new_multisum(dims[1:]))
     return m
+
+def mat_index_set(m, location, value):
+    param1 = location[0]
+    if type(m[param1]) == int:
+        m[param1] = value
+    else:
+        mat_index_set(m[param1], location[1:], value)
 
 # multiplies two sums of roots of unity of different degrees to obtain a matrix
 def xtimes(col, m, dims):
-    ans = new_mat([len(col)] + dims)
+    ans = new_multisum([len(col)] + dims)
     for i in range(len(col)):
         if col[i] == 1:
             ans[i] = m
@@ -154,7 +161,7 @@ def remove_second_dim(a0, dims):
 
 def rconj(m, dims, x):
     nrow = dims[0]
-    m_conj = new_mat(dims)
+    m_conj = new_multisum(dims)
     for i in range(nrow):
         k = (i * x) % nrow
         if len(dims) == 1:
@@ -308,7 +315,116 @@ def multisum_to_radicals(A, dims, degrees):
     A_x = etimes(esumlist(S_x), (1, c))
     return A_x
 
+def cosine_in_radicals(num, denom):
+    # canonize numerator and denominator
+    div = gcd(num, denom)
+    num //= div
+    denom //= div
+    num = num % denom
+    facts = []
+    if denom == 1:
+        return 1
+    if is_prime(denom):
+        if denom == 2:
+            return -1
+        l = [0] * denom
+        l[num] = 1
+        l[denom - num] = 1
+        return etimes(multisum_to_radicals(l, [denom], [(denom - 1) // 2]), (1, 2))
+    else:
+        facts = factorize(denom)
+
+    # if the denominator is a prime power...
+    if facts == [facts[0]] * len(facts):
+        x = len(facts)
+        p = facts[0]
+        # if the denominator is a power of 2...
+        # use the fact that 2*cos(n/2^(k + 1) * tau) = +/-sqrt(2 + 2*cos(n/2^k * tau))
+        if facts[0] == 2:
+            twice_real = 0 # = 2*cos(1/4 * tau) = 2*cos(3/4 * tau)
+            for i in range(2, x):
+                num_mod = num % p**(i + 1)
+                if p**(i - 1) < num_mod < 3*p**(i - 1):
+                    which = 1
+                else:
+                    which = 0
+                # this is the expression for 2*cos(n / p^(i + 1) * tau)
+                twice_real = ['r', 2, which, eplus(2, twice_real), 1]
+            # to do: use etimes after you fix behavior of etimes
+            if x == 2:
+                return etimes(twice_real, (1, 2))
+            return (twice_real, 2)
+        # if the denominator is a power of any other prime, just sum two roots of unity and divide by two.
+        else:
+            # find expression for pth root of unity and complex conjugate, and take the pth root x - 1 times
+            n_mod = num % p
+            l1 = [0] * p
+            l1[n_mod] = 1
+            anti_n_mod = (p - num) % p
+            l2 = [0] * p
+            l2[anti_n_mod] = 1
+            root1 = multisum_to_radicals(l1, [p], [p - 1]) # expression for a pth root of unity
+            root2 = multisum_to_radicals(l2, [p], [p - 1]) # expression for the complex conjugate pth root of unity
+            for i in range(1, x):
+                which1 = ((num + p**i // 2) % p**(i + 1)) // p**i
+                which2 = (p - which1) % p
+                root1 = ['r', p, which1, root1, 1]
+                root2 = ['r', p, which2, root2, 1]
+            return (eplus(root1, root2), 2)
+    # otherwise, the denominator has more than one distinct prime factor.
+    # construct value as sum of two roots of unity, where each root is calculated as a product of p_k^x-th roots for each prime power p_k^x in decomposition of denom
+    else:
+        # to do: make prime powers list from facts instead
+        decomp = prime_powers(denom)
+        coeffs = prime_power_sum(num, decomp)
+        anticoeffs = [decomp[i] - coeffs[i] for i in range(len(coeffs))]
+        # if denom is squarefree, each prime factor is distinct and so we have a multisum of two roots of unity with dimensions of each of the prime factors
+        # we solve this multisum using multisum_to_radicals
+        if square_free(denom):
+            if decomp[0] == 2:
+                decomp = decomp[1:]
+                l = new_multisum(decomp)
+                mat_index_set(l, coeffs[1:], -1)
+                mat_index_set(l, anticoeffs[1:], -1)
+            else:
+                l = new_multisum(decomp)
+                mat_index_set(l, coeffs, 1)
+                mat_index_set(l, anticoeffs, 1)
+            if len(decomp) == 1:
+                return etimes(multisum_to_radicals(l, decomp, [(decomp[0] - 1) // 2]), (1, 2))
+            else:
+                return etimes(multisum_to_radicals(l, decomp, [q - 1 for q in decomp]), (1, 2))
+        # otherwise we just find radical expressions for each prime-power root individually and take the product using eprodlist
+        else:
+            root1 = eprodlist([root_to_radicals(decomp[i], coeffs[i]) for i in range(len(decomp))])
+            root2 = eprodlist([root_to_radicals(decomp[i], anticoeffs[i]) for i in range(len(decomp))])
+            return etimes(eplus(root1, root2), (1, 2))
+
+def sine_in_radicals(num, denom):
+    if denom % 4 != 0:
+        denom *= 2
+        num *= 2
+        if denom % 4 != 0:
+            denom *= 2
+            num *= 2
+    num -= denom // 4
+    return cosine_in_radicals(num, denom)
+
 if __name__ == '__main__':
+    if len(sys.argv) >= 2 and sys.argv[1] == '-t':
+        if len(sys.argv) < 4:
+            raise RuntimeError("-t option needs two parameters.")
+        (num, denom) = map(int, sys.argv[3].split('/'))
+        if sys.argv[2] == 'cos':
+            expr = cosine_in_radicals(num, denom)
+            print(expr_to_latex(expr))
+        elif sys.argv[2] == 'sin':
+            expr = sine_in_radicals(num, denom)
+            print(expr_to_latex(expr))
+        else:
+            raise RuntimeError("{} is not a valid trig function.".format(sys.argv[2]))
+        exit()
+
     if len(sys.argv) >= 2:
         rnum = int(sys.argv[1])
     else:
