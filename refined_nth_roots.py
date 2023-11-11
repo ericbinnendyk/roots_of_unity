@@ -411,19 +411,30 @@ def sine_in_radicals(num, denom):
     return cosine_in_radicals(num, denom)
 
 if __name__ == '__main__':
+    trig_options = ['sin', 'cos']
     if len(sys.argv) >= 2 and sys.argv[1] == '-t':
         if len(sys.argv) < 4:
             raise RuntimeError("-t option needs two parameters.")
         (num, denom) = map(int, sys.argv[3].split('/'))
+        if sys.argv[2] not in trig_options:
+            raise RuntimeError("{} is not a valid trig function.".format(sys.argv[2]))
         if sys.argv[2] == 'cos':
             expr = cosine_in_radicals(num, denom)
             print(expr_to_latex(expr))
         elif sys.argv[2] == 'sin':
             expr = sine_in_radicals(num, denom)
             print(expr_to_latex(expr))
-        else:
-            raise RuntimeError("{} is not a valid trig function.".format(sys.argv[2]))
         exit()
+
+    if sys.argv[1] == '-h':
+        print("python3 refined_nth_roots.py n")
+        print("Calculates a radical expression for e^(2*pi*i/n), the first nth root of unity.")
+        print("python3 refined_nth_roots.py n k")
+        print("Calculates a radical expression for e^(2*k*pi*i/n), the kth nth root of unity.")
+        print("python3 refined_nth_roots.py n k d")
+        print("Calculates a radical expression for a sum of (n - 1)/d roots of unity starting at e^(2*k*pi*i/n) and making a power cycle. The value is the root of a degree-d polynomial.")
+        print("python3 refined_nth_roots.py -t FUNC p/q")
+        print("Calculates a radical expression for the value FUNC(2*pi*p/q), where FUNC is one of the following: {}".format(trig_options))
 
     if len(sys.argv) >= 2:
         rnum = int(sys.argv[1])
